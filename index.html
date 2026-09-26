@@ -1,0 +1,4117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>セールスナビダッシュボード(週別)</title>
+<style>
+  :root {
+    --bg: #F5F7FB; --panel: #FFFFFF; --panel-border: #E5E9F0;
+    --text: #1E2430; --muted: #8891A0;
+    --teal: #0EA894; --amber: #E8952A; --blue: #2E75D6; --coral: #E24B3C; --track: #EEF0F4;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--bg) 340px);
+    color: var(--text);
+    max-width: 1220px; margin: 0 auto; padding: 40px 40px 70px;
+  }
+  h1 { font-weight: 800; font-size: 33.5px; letter-spacing: 0.3px; margin: 0 0 6px; color: #10151F; }
+  .created-label {
+    font-size: 14.5px; font-weight: 700; color: var(--teal); background: color-mix(in srgb, var(--teal) 12%, white);
+    border-radius: 20px; padding: 4px 14px; margin-left: 14px; vertical-align: middle; letter-spacing: .3px;
+  }
+  .subtitle { color: var(--muted); font-size: 14.5px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; }
+  .banner {
+    background: linear-gradient(90deg, rgba(14,168,148,.10), rgba(14,168,148,0));
+    border-left: 3px solid var(--teal);
+    color: #3E4A5E; padding: 12px 18px; border-radius: 4px; font-size: 15px; margin-bottom: 28px;
+  }
+  .tab-radio { display: none; }
+  .tab-bar { display: flex; gap: 10px; margin-bottom: 30px; }
+  .tab-label {
+    cursor: pointer; padding: 16px 12px; border-radius: 10px; background: #fff;
+    border: 1px solid var(--panel-border); font-size: 17px; font-weight: 700; color: #3E4A5E;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; transition: background .15s, color .15s;
+    flex: 1 1 0; text-align: center;
+  }
+  .tab-sub { font-size: 13.5px; font-weight: 400; opacity: .85; }
+  #tab-month:checked ~ .panels #panel-month { display: block; }
+#tab-month:checked ~ .tab-bar .tab-label-month { background: var(--teal); color: #fff; }
+#tab-week1:checked ~ .panels #panel-week1 { display: block; }
+#tab-week1:checked ~ .tab-bar .tab-label-week1 { background: var(--teal); color: #fff; }
+#tab-week2:checked ~ .panels #panel-week2 { display: block; }
+#tab-week2:checked ~ .tab-bar .tab-label-week2 { background: var(--teal); color: #fff; }
+#tab-week3:checked ~ .panels #panel-week3 { display: block; }
+#tab-week3:checked ~ .tab-bar .tab-label-week3 { background: var(--teal); color: #fff; }
+#tab-week4:checked ~ .panels #panel-week4 { display: block; }
+#tab-week4:checked ~ .tab-bar .tab-label-week4 { background: var(--teal); color: #fff; }
+#tab-week5:checked ~ .panels #panel-week5 { display: block; }
+#tab-week5:checked ~ .tab-bar .tab-label-week5 { background: var(--teal); color: #fff; }
+
+  .week-panel { display: none; }
+  .week-heading { font-size: 17px; font-weight: 700; color: var(--muted); margin-bottom: 14px; }
+  .week-range { font-weight: 400; margin-left: 8px; }
+  section {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 28px 30px 32px; margin-bottom: 26px;
+    box-shadow: 0 12px 30px -16px rgba(30,40,60,.15);
+  }
+  .sec-head h2 { font-size: 20px; font-weight: 700; margin: 0 0 22px; display: flex; align-items: baseline; gap: 12px; color: #10151F; }
+  .sec-num { font-size: 14.5px; color: #fff; background: var(--teal); padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+  .empty-note { color: var(--muted); font-size: 15px; padding: 20px 0; }
+  .empty-note-sm { color: var(--muted); font-size: 14px; padding: 6px 0; }
+  .hero-row { display: flex; gap: 34px; align-items: center; margin-bottom: 26px; flex-wrap: wrap; }
+  .gauge-wrap { position: relative; width: 220px; flex: none; }
+  .gauge { width: 100%; display: block; }
+  .gauge-center { position: absolute; top: 58%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .gauge-value { font-size: 38px; font-weight: 700; line-height: 1; color: #10151F; }
+  .gauge-unit { font-size: 18px; color: var(--muted); }
+  .gauge-target { font-size: 12.5px; color: #C23B2E; margin-top: 4px; letter-spacing: .5px; }
+  .kpi-row { display: flex; gap: 14px; flex: 1; flex-wrap: wrap; min-width: 260px; }
+  .kpi-card {
+    flex: 1; min-width: 155px; background: #FAFBFD; border: 1px solid var(--panel-border);
+    border-top: 3px solid var(--accent, var(--teal)); border-radius: 8px; padding: 14px 16px;
+  }
+  .kpi-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; letter-spacing: .3px; }
+  .kpi-value { font-size: 22.5px; font-weight: 700; color: #10151F; }
+  .kpi-sub { font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: .2px; }
+  .chart-title { font-size: 14px; font-weight: 700; color: #3E4A5E; margin: 20px 0 10px; letter-spacing: .3px; }
+  .target-note { color: #C23B2E; margin-left: 6px; }
+  .bar-chart { display: flex; flex-direction: column; gap: 9px; }
+  .bar-row { display: flex; align-items: center; height: 25px; gap: 12px; }
+  .bar-label { width: 148px; flex: none; font-size: 14px; color: #3E4A5E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { position: relative; flex: 1; height: 14px; background: var(--track); border-radius: 7px; }
+  .bar-track.stacked { background: transparent; border-radius: 4px; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 7px; background: var(--bar-color); }
+  .bar-fill.fail { background: color-mix(in srgb, var(--bar-color) 32%, #D8DCE4); }
+  .bar-fill-bg { position: absolute; left: 0; top: 0; height: 100%; border-radius: 7px; background: #6E8CB0; }
+  .bar-fill.overlay { border-radius: 7px 0 0 7px; }
+  .seg { position: absolute; top: 0; height: 100%; }
+  .bar-value { min-width: 90px; font-size: 14px; color: #3E4A5E; text-align: left; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar-value.wide { min-width: 178px; }
+  .bar-value-note { font-size: 12px; color: var(--muted); margin-left: 7px; font-weight: 400; }
+  .bar-breakdown { color: var(--muted); font-size: 12.5px; }
+  .target-line { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px dashed #C23B2E; }
+  .legend { margin-bottom: 14px; font-size: 13.5px; color: #3E4A5E; }
+  .legend-item { margin-right: 18px; }
+  .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .col-chart { display: flex; align-items: flex-end; gap: 22px; height: 210px; padding: 10px 0 32px; border-bottom: 1px solid var(--panel-border); }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; }
+  .col-num { font-size: 14.5px; font-weight: 700; color: #10151F; margin-bottom: 6px; }
+  .col-num-total { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+  .col-track { position: relative; width: 56%; height: 100%; align-self: center; }
+  .col-total { position: absolute; bottom: 0; width: 100%; background: #E2E6ED; border-radius: 4px 4px 0 0; }
+  .col-done { position: absolute; bottom: 0; width: 100%; background: var(--teal); border-radius: 4px 4px 0 0; }
+  .col-done.amber { background: var(--amber); }
+  .col-label { font-size: 13px; color: var(--muted); margin-top: 8px; position: absolute; bottom: -24px; }
+  .day-header {
+    font-size: 14.5px; font-weight: 700; color: #fff; background: var(--teal); display: inline-block;
+    padding: 4px 14px; border-radius: 20px; margin: 20px 0 14px; letter-spacing: .5px;
+  }
+  .deal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .deal-card {
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent, var(--muted));
+    background: #FAFBFD; border-radius: 8px; padding: 16px;
+  }
+  .badge {
+    display: inline-block; font-size: 12.5px; padding: 4px 10px; border-radius: 4px; margin-bottom: 10px;
+    background: color-mix(in srgb, var(--accent) 14%, white); color: var(--accent); font-weight: 700;
+  }
+  .deal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #10151F; }
+  .deal-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .deal-field { display: flex; font-size: 14px; margin-bottom: 7px; color: #3E4A5E; }
+  .deal-field-label { width: 76px; flex: none; color: var(--muted); font-size: 12px; padding-top: 1px; }
+  .matrix-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .matrix-table th, .matrix-table td { padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--panel-border); }
+  .matrix-table thead th { font-weight: 700; color: var(--muted); font-size: 13.5px; border-bottom: 2px solid var(--panel-border); }
+  .matrix-store-head, .matrix-store { text-align: left; }
+  .matrix-store { font-weight: 700; color: #10151F; }
+  .matrix-total-head, .matrix-total { font-weight: 700; color: var(--teal); }
+  .matrix-table tbody tr:hover { background: #FAFBFD; }
+</style>
+</head>
+<body>
+<input type="radio" name="weektab" id="tab-month" class="tab-radio" checked><input type="radio" name="weektab" id="tab-week1" class="tab-radio" ><input type="radio" name="weektab" id="tab-week2" class="tab-radio" ><input type="radio" name="weektab" id="tab-week3" class="tab-radio" ><input type="radio" name="weektab" id="tab-week4" class="tab-radio" ><input type="radio" name="weektab" id="tab-week5" class="tab-radio" >
+<h1>セールスナビダッシュボード<span class="created-label">9/25現在</span></h1>
+<div class="subtitle">Sales Navi Dashboard</div>
+<div class="banner">週を選択してください(下のタブで切り替え)</div>
+<div class="tab-bar"><label for="tab-month" class="tab-label tab-label-month">当月累計<span class="tab-sub">9/1〜30</span></label><label for="tab-week1" class="tab-label tab-label-week1">第1週<span class="tab-sub">9/1〜6</span></label><label for="tab-week2" class="tab-label tab-label-week2">第2週<span class="tab-sub">9/7〜13</span></label><label for="tab-week3" class="tab-label tab-label-week3">第3週<span class="tab-sub">9/14〜22</span></label><label for="tab-week4" class="tab-label tab-label-week4">第4週<span class="tab-sub">9/23〜27</span></label><label for="tab-week5" class="tab-label tab-label-week5">第5週<span class="tab-sub">9/28〜30</span></label></div>
+<div class="panels">
+<div class="week-panel" id="panel-month">
+  <div class="week-heading">当月累計<span class="week-range">(9/1〜30)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 106.4,22.1" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">48.7<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">1833件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">892件</div><div class="kpi-sub">うちコメント有: 801件 (89.8%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">941件</div></div></div>
+  </div>
+  <div class="chart-title">週別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">234<span class="col-num-total">/373</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:55.63%"></div>
+    <div class="col-done" style="height:34.90%"></div>
+  </div>
+  <div class="col-label">第1週</div>
+</div><div class="col">
+  <div class="col-num">303<span class="col-num-total">/493</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:73.53%"></div>
+    <div class="col-done" style="height:45.19%"></div>
+  </div>
+  <div class="col-label">第2週</div>
+</div><div class="col">
+  <div class="col-num">280<span class="col-num-total">/583</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:41.76%"></div>
+  </div>
+  <div class="col-label">第3週</div>
+</div><div class="col">
+  <div class="col-num">75<span class="col-num-total">/291</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:43.40%"></div>
+    <div class="col-done" style="height:11.19%"></div>
+  </div>
+  <div class="col-label">第4週</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/93</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:13.87%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">第5週</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">82.5%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:52.38%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:41.70%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">49.7%<span class="bar-value-note">コメント 79.6%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:44.37%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:35.63%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">42.1%<span class="bar-value-note">コメント 80.3%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:26.35%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:26.35%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">25.0%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:7.17%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:7.17%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">6.8%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:1.26%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">1.2%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:1.05%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">1.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:84.32%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">88.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:81.03%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">82.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:80.34%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">81.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:80.24%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">81.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:79.25%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">80.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:65.51%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">66.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:64.82%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">65.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:62.75%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">63.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">野呂 藍亮</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:59.88%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value">60.6%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">車点検売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">324件</div>
+</div><div class="bar-row">
+  <div class="bar-label">その他</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:55.56%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">207件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス一般、その他売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:53.68%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">200件</div>
+</div><div class="bar-row">
+  <div class="bar-label">査定</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:35.70%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">133件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:28.99%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">108件</div>
+</div><div class="bar-row">
+  <div class="bar-label">セールスガイド提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:19.32%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">72件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:13.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">52件</div>
+</div><div class="bar-row">
+  <div class="bar-label">調子伺い</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:12.88%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">48件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:10.20%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">38件</div>
+</div><div class="bar-row">
+  <div class="bar-label">下廻り確認</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:8.05%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">30件</div>
+</div><div class="bar-row">
+  <div class="bar-label">ホット発生</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.03%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">15件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス商品売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.03%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">15件</div>
+</div><div class="bar-row">
+  <div class="bar-label">メンテプロパック加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.76%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">14件</div>
+</div><div class="bar-row">
+  <div class="bar-label">入庫予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.76%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">14件</div>
+</div><div class="bar-row">
+  <div class="bar-label">金融商品見積(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.22%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">12件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（終了）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.95%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">11件</div>
+</div><div class="bar-row">
+  <div class="bar-label">受注</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.15%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">8件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（継続）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.15%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">8件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.88%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">7件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービスアフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.88%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">7件</div>
+</div><div class="bar-row">
+  <div class="bar-label">紹介依頼</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.61%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.61%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.34%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web以外</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.34%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.34%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">携帯番号・アドレス取得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">与信申込(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">証券/SU獲得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.54%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車アフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険アフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険解約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">日産カード加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（新規）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 70.3,31.5" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">35.1<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">35.1%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">644件</div><div class="kpi-sub">うち作戦コメント有: 544件 (84.5%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">1189件</div></div></div>
+  </div>
+  <div class="chart-title">週別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">120<span class="col-num-total">/373</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:55.63%"></div>
+    <div class="col-done amber" style="height:17.90%"></div>
+  </div>
+  <div class="col-label">第1週</div>
+</div><div class="col">
+  <div class="col-num">226<span class="col-num-total">/493</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:73.53%"></div>
+    <div class="col-done amber" style="height:33.71%"></div>
+  </div>
+  <div class="col-label">第2週</div>
+</div><div class="col">
+  <div class="col-num">173<span class="col-num-total">/583</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:25.80%"></div>
+  </div>
+  <div class="col-label">第3週</div>
+</div><div class="col">
+  <div class="col-num">98<span class="col-num-total">/291</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:43.40%"></div>
+    <div class="col-done amber" style="height:14.62%"></div>
+  </div>
+  <div class="col-label">第4週</div>
+</div><div class="col">
+  <div class="col-num">27<span class="col-num-total">/93</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:13.87%"></div>
+    <div class="col-done amber" style="height:4.03%"></div>
+  </div>
+  <div class="col-label">第5週</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">55.0%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:74.78%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:59.38%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">47.3%<span class="bar-value-note">作戦コメント 79.4%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:41.26%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:41.26%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">26.1%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:34.62%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:17.14%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">21.9%<span class="bar-value-note">作戦コメント 49.5%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:8.06%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:8.06%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">5.1%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:1.90%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:1.90%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">1.2%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:79.05%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">72.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.47%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">71.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:74.28%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">61.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:70.65%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">58.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:68.84%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">57.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">今泉 健一</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:59.18%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">49.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:57.85%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">47.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:56.28%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">46.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:55.31%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:60.39%"></div>
+  </div>
+  <div class="bar-value">45.8%</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定(週別・店舗別件数)</h2></div>
+  <table class="matrix-table">
+    <thead><tr><th class="matrix-store-head">店舗</th><th>第1週</th><th>第2週</th><th>第3週</th><th>第4週</th><th>第5週</th><th class="matrix-total-head">合計</th></tr></thead>
+    <tbody><tr><td class="matrix-store">神山店</td><td>7</td><td>5</td><td>10</td><td>0</td><td>0</td><td class="matrix-total">22</td></tr><tr><td class="matrix-store">亀田本町店</td><td>3</td><td>5</td><td>1</td><td>0</td><td>0</td><td class="matrix-total">9</td></tr><tr><td class="matrix-store">石川店</td><td>1</td><td>2</td><td>2</td><td>0</td><td>0</td><td class="matrix-total">5</td></tr><tr><td class="matrix-store">森店</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="matrix-total">1</td></tr></tbody>
+  </table>
+</section>
+</div><div class="week-panel" id="panel-week1">
+  <div class="week-heading">第1週<span class="week-range">(9/1〜6)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 144.2,28.9" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">62.7<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">373件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">234件</div><div class="kpi-sub">うちコメント有: 207件 (88.5%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">139件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">0<span class="col-num-total">/1</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:0.87%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/2(水)</div>
+</div><div class="col">
+  <div class="col-num">36<span class="col-num-total">/80</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:69.57%"></div>
+    <div class="col-done" style="height:31.30%"></div>
+  </div>
+  <div class="col-label">9/3(木)</div>
+</div><div class="col">
+  <div class="col-num">61<span class="col-num-total">/94</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:81.74%"></div>
+    <div class="col-done" style="height:53.04%"></div>
+  </div>
+  <div class="col-label">9/4(金)</div>
+</div><div class="col">
+  <div class="col-num">62<span class="col-num-total">/100</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:53.91%"></div>
+  </div>
+  <div class="col-label">9/5(土)</div>
+</div><div class="col">
+  <div class="col-num">75<span class="col-num-total">/98</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:85.22%"></div>
+    <div class="col-done" style="height:65.22%"></div>
+  </div>
+  <div class="col-label">9/6(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">96.3%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:67.27%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:52.20%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">74.5%<span class="bar-value-note">コメント 77.6%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:51.47%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:41.18%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">57.0%<span class="bar-value-note">コメント 80.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:31.42%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:31.42%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">34.8%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:5.06%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:5.06%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">5.6%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:4.79%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">5.3%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:72.24%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">竹内 杏</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:82.61%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">95.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:77.30%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">88.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:76.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">88.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:70.43%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">81.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:60.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">69.0%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">車点検売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">81件</div>
+</div><div class="bar-row">
+  <div class="bar-label">その他</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:64.41%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">60件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス一般、その他売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:50.46%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">47件</div>
+</div><div class="bar-row">
+  <div class="bar-label">査定</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:39.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">37件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:27.91%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">26件</div>
+</div><div class="bar-row">
+  <div class="bar-label">セールスガイド提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:24.69%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">23件</div>
+</div><div class="bar-row">
+  <div class="bar-label">調子伺い</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:17.18%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">16件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:17.18%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">16件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:12.88%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">12件</div>
+</div><div class="bar-row">
+  <div class="bar-label">下廻り確認</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:10.74%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">10件</div>
+</div><div class="bar-row">
+  <div class="bar-label">入庫予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:5.37%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">ホット発生</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.29%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">紹介依頼</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.22%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.22%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">金融商品見積(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.15%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.15%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（終了）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.15%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険アフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">証券/SU獲得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">メンテプロパック加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">携帯番号・アドレス取得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">与信申込(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">受注</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険解約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービスアフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス商品売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 63.3,35.4" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">32.2<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">32.2%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">120件</div><div class="kpi-sub">うち作戦コメント有: 99件 (82.5%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">253件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">0<span class="col-num-total">/1</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:0.87%"></div>
+    <div class="col-done amber" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/2(水)</div>
+</div><div class="col">
+  <div class="col-num">19<span class="col-num-total">/80</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:69.57%"></div>
+    <div class="col-done amber" style="height:16.52%"></div>
+  </div>
+  <div class="col-label">9/3(木)</div>
+</div><div class="col">
+  <div class="col-num">25<span class="col-num-total">/94</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:81.74%"></div>
+    <div class="col-done amber" style="height:21.74%"></div>
+  </div>
+  <div class="col-label">9/4(金)</div>
+</div><div class="col">
+  <div class="col-num">34<span class="col-num-total">/100</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:29.57%"></div>
+  </div>
+  <div class="col-label">9/5(土)</div>
+</div><div class="col">
+  <div class="col-num">42<span class="col-num-total">/98</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:85.22%"></div>
+    <div class="col-done amber" style="height:36.52%"></div>
+  </div>
+  <div class="col-label">9/6(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:84.52%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:84.52%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">48.6%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:83.65%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:66.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">48.1%<span class="bar-value-note">作戦コメント 78.9%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:68.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:68.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">39.1%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:34.09%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:11.93%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">19.6%<span class="bar-value-note">作戦コメント 35.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:9.22%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:9.22%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">5.3%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">90.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">今泉 健一</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:72.06%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">75.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:69.85%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">72.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:53.42%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">55.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:51.69%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">53.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:45.74%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">47.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:44.39%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">46.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:43.24%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">45.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:42.28%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.04%"></div>
+  </div>
+  <div class="bar-value">44.0%</div>
+</div></div>
+  <div class="chart-title">9/5(土) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:32.74%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">11/28</div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:71.43%"></div>
+    <div class="bar-fill overlay" style="width:17.86%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">6/24</div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:65.48%"></div>
+    <div class="bar-fill overlay" style="width:38.69%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">13/22</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:23.81%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/8</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:17.86%"></div>
+    <div class="bar-fill overlay" style="width:2.98%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">1/6</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:17.86%"></div>
+    <div class="bar-fill overlay" style="width:8.93%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">3/6</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:14.88%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/5</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:2.98%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/1</div>
+</div></div><div class="chart-title">9/6(日) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:30.86%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">10/27</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:77.16%"></div>
+    <div class="bar-fill overlay" style="width:55.56%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">18/25</div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:74.07%"></div>
+    <div class="bar-fill overlay" style="width:33.95%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">11/24</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:27.78%"></div>
+    <div class="bar-fill overlay" style="width:9.26%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">3/9</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:15.43%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/5</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:12.35%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:9.26%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:3.09%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/1</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定</h2></div>
+  <div class="day-header">9/4(金)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">11:00　神山店</div>
+  <div class="deal-sub">有限会社アースホーム企画 / 担当 芳賀 芳勝</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>新車辞めた　中古か車検もう一度考える</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>新車高いので中古　又はもう一度車検？</span></div>
+</div></div><div class="day-header">9/5(土)</div><div class="deal-grid"><div class="deal-card" style="--accent:#8B5CF6">
+  <span class="badge">中古商談</span>
+  <div class="deal-title">10:00　森店</div>
+  <div class="deal-sub">志村　立巳 / 担当 山本 雅巳</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>中古Ｅ１２展示車</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">13:01　神山店</div>
+  <div class="deal-sub">池田　千尋 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>キックス</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:00　神山店</div>
+  <div class="deal-sub">堀口 駿 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>きっかけはフリー客。見積もり希望。当社セレナとエクストレイル。他社も含め車種が定まっていない。</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>２０日に再度来店。</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:28　神山店</div>
+  <div class="deal-sub">堀口　駿 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:00　石川店</div>
+  <div class="deal-sub">吉田　桃子 / 担当 加藤 英基</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>セレナ検討　査定　見積　試乗できれば</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>20.21日で旦那さんと再度商談</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:00　亀田本町店</div>
+  <div class="deal-sub">向出　道弘 / 担当 安部 雅史</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>キックス促進　試乗</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>P16  見積、試乗。銀行に行って相談してくる。わかったら連絡します。</span></div>
+</div></div><div class="day-header">9/6(日)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:01　亀田本町店</div>
+  <div class="deal-sub">勅使川原　耀 / 担当 大島 貞男</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>キックス試乗促進</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>キックス</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:30　神山店</div>
+  <div class="deal-sub">菊池　順子 / 担当 竹内 杏</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>ルークス商談、試乗・査定予定</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">13:07　神山店</div>
+  <div class="deal-sub">池田 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>前日来店、池田様併有車
+P16検討</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:54　神山店</div>
+  <div class="deal-sub">松本　浩治 / 担当 竹村 優希</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>受注</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">16:44　亀田本町店</div>
+  <div class="deal-sub">上様 / 担当 杉沢 修平</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>キックス</span></div>
+</div></div>
+</section>
+</div><div class="week-panel" id="panel-week2">
+  <div class="week-heading">第2週<span class="week-range">(9/7〜13)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 141.1,27.7" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">61.5<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">493件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">303件</div><div class="kpi-sub">うちコメント有: 271件 (89.4%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">190件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">66<span class="col-num-total">/87</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:72.05%"></div>
+    <div class="col-done" style="height:54.66%"></div>
+  </div>
+  <div class="col-label">9/7(月)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/9</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:7.45%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/9(水)</div>
+</div><div class="col">
+  <div class="col-num">51<span class="col-num-total">/87</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:72.05%"></div>
+    <div class="col-done" style="height:42.24%"></div>
+  </div>
+  <div class="col-label">9/10(木)</div>
+</div><div class="col">
+  <div class="col-num">67<span class="col-num-total">/102</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:84.47%"></div>
+    <div class="col-done" style="height:55.49%"></div>
+  </div>
+  <div class="col-label">9/11(金)</div>
+</div><div class="col">
+  <div class="col-num">54<span class="col-num-total">/105</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:44.72%"></div>
+  </div>
+  <div class="col-label">9/12(土)</div>
+</div><div class="col">
+  <div class="col-num">65<span class="col-num-total">/103</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:85.30%"></div>
+    <div class="col-done" style="height:53.83%"></div>
+  </div>
+  <div class="col-label">9/13(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">88.8%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:72.27%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:56.44%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">73.8%<span class="bar-value-note">コメント 78.1%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:51.31%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:42.64%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">52.4%<span class="bar-value-note">コメント 83.1%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:40.83%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:40.83%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">41.7%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:78.34%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:82.35%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">94.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:78.26%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">90.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">野呂 藍亮</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:78.26%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">90.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:72.43%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">83.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:70.26%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">80.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:68.52%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">78.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:64.70%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">74.4%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">車点検売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">120件</div>
+</div><div class="bar-row">
+  <div class="bar-label">その他</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:49.28%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">68件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス一般、その他売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:45.65%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">63件</div>
+</div><div class="bar-row">
+  <div class="bar-label">査定</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:25.36%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">35件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:24.64%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">34件</div>
+</div><div class="bar-row">
+  <div class="bar-label">セールスガイド提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:15.22%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">21件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:8.70%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">12件</div>
+</div><div class="bar-row">
+  <div class="bar-label">調子伺い</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:7.97%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">11件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:7.97%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">11件</div>
+</div><div class="bar-row">
+  <div class="bar-label">下廻り確認</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:5.80%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">8件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（終了）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:5.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">7件</div>
+</div><div class="bar-row">
+  <div class="bar-label">メンテプロパック加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:5.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">7件</div>
+</div><div class="bar-row">
+  <div class="bar-label">ホット発生</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.35%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス商品売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.35%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">入庫予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.62%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.17%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">金融商品見積(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.17%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.17%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（継続）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.17%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">受注</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">紹介依頼</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web以外</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービスアフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">携帯番号・アドレス取得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.45%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車アフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（新規）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.72%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 98.4,22.8" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">45.8<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">45.8%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">226件</div><div class="kpi-sub">うち作戦コメント有: 181件 (80.1%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">267件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">50<span class="col-num-total">/87</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:72.05%"></div>
+    <div class="col-done amber" style="height:41.41%"></div>
+  </div>
+  <div class="col-label">9/7(月)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/9</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:7.45%"></div>
+    <div class="col-done amber" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/9(水)</div>
+</div><div class="col">
+  <div class="col-num">36<span class="col-num-total">/87</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:72.05%"></div>
+    <div class="col-done amber" style="height:29.81%"></div>
+  </div>
+  <div class="col-label">9/10(木)</div>
+</div><div class="col">
+  <div class="col-num">36<span class="col-num-total">/102</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:84.47%"></div>
+    <div class="col-done amber" style="height:29.81%"></div>
+  </div>
+  <div class="col-label">9/11(金)</div>
+</div><div class="col">
+  <div class="col-num">54<span class="col-num-total">/105</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:44.72%"></div>
+  </div>
+  <div class="col-label">9/12(土)</div>
+</div><div class="col">
+  <div class="col-num">50<span class="col-num-total">/103</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:85.30%"></div>
+    <div class="col-done amber" style="height:41.41%"></div>
+  </div>
+  <div class="col-label">9/13(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:70.17%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">63.8%<span class="bar-value-note">作戦コメント 80.7%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:71.42%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:71.42%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">52.4%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:58.20%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:26.36%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">42.7%<span class="bar-value-note">作戦コメント 45.3%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:56.84%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:56.84%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">41.7%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:68.15%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">89.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:84.24%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">86.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:72.29%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">74.4%</div>
+</div><div class="bar-row">
+  <div class="bar-label">今泉 健一</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:66.26%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">68.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:60.72%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">62.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:58.88%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">60.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:56.64%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">58.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:54.41%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">56.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:48.58%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:48.58%"></div>
+  </div>
+  <div class="bar-value">50.0%</div>
+</div></div>
+  <div class="chart-title">9/12(土) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:57.47%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">20/29</div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:71.84%"></div>
+    <div class="bar-fill overlay" style="width:37.36%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">13/25</div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:68.97%"></div>
+    <div class="bar-fill overlay" style="width:54.60%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">19/24</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:31.61%"></div>
+    <div class="bar-fill overlay" style="width:5.75%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">2/11</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:14.37%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/5</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:14.37%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/5</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:8.62%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:8.62%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div></div><div class="chart-title">9/13(日) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:60.81%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">27/37</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:56.31%"></div>
+    <div class="bar-fill overlay" style="width:36.04%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">16/25</div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:54.05%"></div>
+    <div class="bar-fill overlay" style="width:15.77%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">7/24</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:18.02%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/8</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:9.01%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.76%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:4.50%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定</h2></div>
+  <div class="day-header">9/7(月)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">09:30　石川店</div>
+  <div class="deal-sub">来店(予約あり) / 担当 加藤 英基</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>リードにてセレナ　試乗／カタログ　簡易見積</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>セレナ　ガソリン車　見積　ヴォクシーと競合　検討する</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:00　亀田本町店</div>
+  <div class="deal-sub">川口　亘 / 担当 平館 健</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>中古～新車提案</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>代替検討</span></div>
+</div></div><div class="day-header">9/10(木)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">17:02　神山店</div>
+  <div class="deal-sub">笹谷　博美 / 担当 竹内 杏</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>デイズ検討</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">17:50　亀田本町店</div>
+  <div class="deal-sub">小田島　悠人 / 担当 平館 健</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>注文書</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>注文書貰います</span></div>
+</div></div><div class="day-header">9/11(金)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:00　亀田本町店</div>
+  <div class="deal-sub">白戸　秋一 / 担当 平館 健</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>新車提案</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>ハスラーから代替検討　購入相談</span></div>
+</div></div><div class="day-header">9/12(土)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">11:00　神山店</div>
+  <div class="deal-sub">西館　多賀廣 / 担当 芳賀 芳勝</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>リーフ見たとの事で来店</span></div>
+</div><div class="deal-card" style="--accent:#8B5CF6">
+  <span class="badge">中古商談</span>
+  <div class="deal-title">14:00　亀田本町店</div>
+  <div class="deal-sub">白戸　秋一 / 担当 平館 健</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>車検見積り、鈑金見積り提示　方向性決めます</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:00　亀田本町店</div>
+  <div class="deal-sub">川村　陽子 / 担当 平賀 崇</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>デイズ</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>デイズ試乗</span></div>
+</div></div><div class="day-header">9/13(日)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:37　神山店</div>
+  <div class="deal-sub">久保　義博 / 担当 竹村 優希</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>オーラ</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:00　神山店</div>
+  <div class="deal-sub">藤澤　千晴 / 担当 竹村 優希</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>受注</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:30　神山店</div>
+  <div class="deal-sub">津山　新也 / 担当 芳賀 芳勝</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>ノート受注　クレジットのみ19日再来店</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>受注　クレジットのみ19日再来店</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">16:00　石川店</div>
+  <div class="deal-sub">近藤 宏哉 / 担当 加藤 英基</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>フリー来店　バネット　プロボックスと代替え予定
+税理士に確認後一週間以内に返事くる</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>フリーユーザー　Ｍ２０　在庫　税理士に確認して今週中に連絡くれる
+株式会社近藤塗装店　代表</span></div>
+</div></div>
+</section>
+</div><div class="week-panel" id="panel-week3">
+  <div class="week-heading">第3週<span class="week-range">(9/14〜22)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 104.5,22.2" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">48.0<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">583件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">280件</div><div class="kpi-sub">うちコメント有: 255件 (91.1%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">303件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">31<span class="col-num-total">/64</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:49.25%"></div>
+    <div class="col-done" style="height:23.86%"></div>
+  </div>
+  <div class="col-label">9/14(月)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/2</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:1.54%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/15(火)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/4</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:3.08%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/16(水)</div>
+</div><div class="col">
+  <div class="col-num">31<span class="col-num-total">/77</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:59.25%"></div>
+    <div class="col-done" style="height:23.86%"></div>
+  </div>
+  <div class="col-label">9/17(木)</div>
+</div><div class="col">
+  <div class="col-num">44<span class="col-num-total">/92</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:70.80%"></div>
+    <div class="col-done" style="height:33.86%"></div>
+  </div>
+  <div class="col-label">9/18(金)</div>
+</div><div class="col">
+  <div class="col-num">49<span class="col-num-total">/113</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:37.71%"></div>
+  </div>
+  <div class="col-label">9/19(土)</div>
+</div><div class="col">
+  <div class="col-num">47<span class="col-num-total">/84</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:64.64%"></div>
+    <div class="col-done" style="height:36.17%"></div>
+  </div>
+  <div class="col-label">9/20(日)</div>
+</div><div class="col">
+  <div class="col-num">50<span class="col-num-total">/89</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:68.49%"></div>
+    <div class="col-done" style="height:38.48%"></div>
+  </div>
+  <div class="col-label">9/21(月)</div>
+</div><div class="col">
+  <div class="col-num">28<span class="col-num-total">/58</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:44.63%"></div>
+    <div class="col-done" style="height:21.55%"></div>
+  </div>
+  <div class="col-label">9/22(火)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">93.4%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:48.79%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:39.27%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">52.4%<span class="bar-value-note">コメント 80.5%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:26.72%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:21.62%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">28.7%<span class="bar-value-note">コメント 80.9%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:2.89%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">3.1%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:74.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:82.78%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">95.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:81.13%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">93.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:79.04%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">90.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:75.13%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">86.4%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:66.87%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">76.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:59.83%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">68.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:59.30%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">68.2%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:58.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">66.7%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">車点検売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">98件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス一般、その他売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:68.32%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">77件</div>
+</div><div class="bar-row">
+  <div class="bar-label">その他</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:51.46%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">58件</div>
+</div><div class="bar-row">
+  <div class="bar-label">査定</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:47.03%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">53件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:37.27%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">42件</div>
+</div><div class="bar-row">
+  <div class="bar-label">セールスガイド提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:23.07%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">26件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:21.30%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">24件</div>
+</div><div class="bar-row">
+  <div class="bar-label">調子伺い</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:14.20%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">16件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:11.54%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">13件</div>
+</div><div class="bar-row">
+  <div class="bar-label">下廻り確認</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:7.99%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">9件</div>
+</div><div class="bar-row">
+  <div class="bar-label">金融商品見積(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:6.21%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">7件</div>
+</div><div class="bar-row">
+  <div class="bar-label">メンテプロパック加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:5.32%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">ホット発生</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.44%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">受注</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.44%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス商品売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:4.44%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービスアフターフォロー</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.55%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.55%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">4件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.66%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">入庫予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.66%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">与信申込(BVC/おまとめプラン)</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:2.66%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web以外</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.77%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">中古車提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.77%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（継続）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:1.77%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.89%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">紹介依頼</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.89%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車納車</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.89%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.89%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">日産カード加入</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:0.89%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 57.6,39.3" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">29.7<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">29.7%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">173件</div><div class="kpi-sub">うち作戦コメント有: 153件 (88.4%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">410件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">22<span class="col-num-total">/64</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:49.25%"></div>
+    <div class="col-done amber" style="height:16.93%"></div>
+  </div>
+  <div class="col-label">9/14(月)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/2</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:1.54%"></div>
+    <div class="col-done amber" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/15(火)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/4</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:3.08%"></div>
+    <div class="col-done amber" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/16(水)</div>
+</div><div class="col">
+  <div class="col-num">16<span class="col-num-total">/77</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:59.25%"></div>
+    <div class="col-done amber" style="height:12.31%"></div>
+  </div>
+  <div class="col-label">9/17(木)</div>
+</div><div class="col">
+  <div class="col-num">27<span class="col-num-total">/92</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:70.80%"></div>
+    <div class="col-done amber" style="height:20.78%"></div>
+  </div>
+  <div class="col-label">9/18(金)</div>
+</div><div class="col">
+  <div class="col-num">35<span class="col-num-total">/113</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:26.93%"></div>
+  </div>
+  <div class="col-label">9/19(土)</div>
+</div><div class="col">
+  <div class="col-num">24<span class="col-num-total">/84</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:64.64%"></div>
+    <div class="col-done amber" style="height:18.47%"></div>
+  </div>
+  <div class="col-label">9/20(日)</div>
+</div><div class="col">
+  <div class="col-num">23<span class="col-num-total">/89</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:68.49%"></div>
+    <div class="col-done amber" style="height:17.70%"></div>
+  </div>
+  <div class="col-label">9/21(月)</div>
+</div><div class="col">
+  <div class="col-num">26<span class="col-num-total">/58</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:44.63%"></div>
+    <div class="col-done amber" style="height:20.01%"></div>
+  </div>
+  <div class="col-label">9/22(火)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">51.2%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:75.07%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:60.05%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">44.2%<span class="bar-value-note">作戦コメント 80.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:23.78%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:16.55%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">14.0%<span class="bar-value-note">作戦コメント 69.6%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:84.92%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">68.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:80.01%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">63.3%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:75.20%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">59.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:72.93%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">57.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:63.20%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">50.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:57.51%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">45.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:54.22%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">42.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:51.69%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">40.9%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:46.01%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:63.20%"></div>
+  </div>
+  <div class="bar-value">36.4%</div>
+</div></div>
+  <div class="chart-title">9/19(土) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:14.71%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">6/34</div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:78.43%"></div>
+    <div class="bar-fill overlay" style="width:41.67%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">17/32</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:66.18%"></div>
+    <div class="bar-fill overlay" style="width:29.41%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">12/27</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:17.16%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/7</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:12.25%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/5</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:7.35%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:7.35%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:4.90%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div></div><div class="chart-title">9/20(日) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:3.33%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">1/25</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:76.67%"></div>
+    <div class="bar-fill overlay" style="width:36.67%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">11/23</div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:70.00%"></div>
+    <div class="bar-fill overlay" style="width:40.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">12/21</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:13.33%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:13.33%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:13.33%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.67%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:3.33%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/1</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定</h2></div>
+  <div class="day-header">9/14(月)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:00　神山店</div>
+  <div class="deal-sub">山田　達彦 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>ルークス提案。</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:00　石川店</div>
+  <div class="deal-sub">株式会社　近藤塗装店 / 担当 加藤 英基</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>昨日来店フリーユーザー　Ｍ２０契約に来店</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div></div><div class="day-header">9/17(木)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">13:00　神山店</div>
+  <div class="deal-sub">久保　竜也 / 担当 竹内 杏</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>ハガキに載っていた限定7台のルークス検討中</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">15:00　神山店</div>
+  <div class="deal-sub">岩谷　衣織 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>ノート検討中。</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div></div><div class="day-header">9/18(金)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">13:00　石川店</div>
+  <div class="deal-sub">株式会社　ユイットワークス 代表取締役　中村様 / 担当 加藤 英基</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>ＡＡ１　新規ユーザー</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>24日に返答来る。ＢＡ２　現金　今月登録</span></div>
+</div></div><div class="day-header">9/19(土)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:30　神山店</div>
+  <div class="deal-sub">佐藤 由麻 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>ルークス商談</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">10:30　神山店</div>
+  <div class="deal-sub">佐藤 由麻 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">16:00　神山店</div>
+  <div class="deal-sub">池田 千尋 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>キックス商談</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div></div><div class="day-header">9/20(日)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">13:00　神山店</div>
+  <div class="deal-sub">堀口 駿 / 担当 水嶋 規雄</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>セレナ商談</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>購入今ではない。</span></div>
+</div></div><div class="day-header">9/21(月)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:00　神山店</div>
+  <div class="deal-sub">半海　貴大 / 担当 芳賀 芳勝</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>BVC最終回一年前　査定価格伝える　キックス促進</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">14:30　亀田本町店</div>
+  <div class="deal-sub">向出　道弘 / 担当 安部 雅史</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>キックス商談　受注</span></div>
+</div></div><div class="day-header">9/22(火)</div><div class="deal-grid"><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">11:52　神山店</div>
+  <div class="deal-sub">坂井　恵 / 担当 竹内 杏</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>ノート検討
+ヴィッツ下取り予定</span></div>
+</div><div class="deal-card" style="--accent:#2E75D6">
+  <span class="badge">新車商談</span>
+  <div class="deal-title">12:59　神山店</div>
+  <div class="deal-sub">癖強アウディー乗り / 担当 竹内 杏</div>
+  <div class="deal-field"><span class="deal-field-label">作戦</span><span>未入力</span></div>
+  <div class="deal-field"><span class="deal-field-label">活動結果</span><span>未入力</span></div>
+</div></div>
+</section>
+</div><div class="week-panel" id="panel-week4">
+  <div class="week-heading">第4週<span class="week-range">(9/23〜27)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 49.4,46.2" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">25.8<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">291件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">75件</div><div class="kpi-sub">うちコメント有: 68件 (90.7%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">216件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">0<span class="col-num-total">/4</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:4.29%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/23(水)</div>
+</div><div class="col">
+  <div class="col-num">39<span class="col-num-total">/70</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:75.15%"></div>
+    <div class="col-done" style="height:41.87%"></div>
+  </div>
+  <div class="col-label">9/24(木)</div>
+</div><div class="col">
+  <div class="col-num">36<span class="col-num-total">/81</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:38.65%"></div>
+  </div>
+  <div class="col-label">9/25(金)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/66</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:70.85%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/26(土)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/70</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:75.15%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/27(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:54.35%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:54.35%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">50.0%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:36.20%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:36.20%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">33.3%<span class="bar-value-note">コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:29.35%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:23.92%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">27.0%<span class="bar-value-note">コメント 81.5%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:16.96%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:13.57%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">15.6%<span class="bar-value-note">コメント 80.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">赤平 恵一</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">野呂 藍亮</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:56.52%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">65.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:46.78%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">53.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:43.48%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">50.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:40.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">47.1%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:38.09%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">43.8%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:34.78%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">40.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">芳賀 芳勝</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:26.09%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:69.57%"></div>
+  </div>
+  <div class="bar-value">30.0%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">車点検売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">25件</div>
+</div><div class="bar-row">
+  <div class="bar-label">その他</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:73.04%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">21件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス一般、その他売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:45.22%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">13件</div>
+</div><div class="bar-row">
+  <div class="bar-label">査定</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:27.83%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">8件</div>
+</div><div class="bar-row">
+  <div class="bar-label">新車見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:20.87%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">6件</div>
+</div><div class="bar-row">
+  <div class="bar-label">調子伺い</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:17.39%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">5件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（継続）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:10.43%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">サービス商品売上</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:10.43%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">下廻り確認</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:10.43%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">3件</div>
+</div><div class="bar-row">
+  <div class="bar-label">試乗</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:6.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">結果なし（終了）</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:6.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">セールスガイド提案</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:6.96%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">2件</div>
+</div><div class="bar-row">
+  <div class="bar-label">携帯番号・アドレス取得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.48%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険成約（継続）Web以外</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.48%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">証券/SU獲得</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.48%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">保険見積</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.48%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div><div class="bar-row">
+  <div class="bar-label">入庫予約</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:3.48%;--bar-color:#E24B3C"></div>
+    
+  </div>
+  <div class="bar-value">1件</div>
+</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 66.9,33.3" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">33.7<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">33.7%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">98件</div><div class="kpi-sub">うち作戦コメント有: 84件 (85.7%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">193件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">0<span class="col-num-total">/4</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:4.29%"></div>
+    <div class="col-done amber" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/23(水)</div>
+</div><div class="col">
+  <div class="col-num">21<span class="col-num-total">/70</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:75.15%"></div>
+    <div class="col-done amber" style="height:22.54%"></div>
+  </div>
+  <div class="col-label">9/24(木)</div>
+</div><div class="col">
+  <div class="col-num">26<span class="col-num-total">/81</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:27.91%"></div>
+  </div>
+  <div class="col-label">9/25(金)</div>
+</div><div class="col">
+  <div class="col-num">27<span class="col-num-total">/66</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:70.85%"></div>
+    <div class="col-done amber" style="height:28.99%"></div>
+  </div>
+  <div class="col-label">9/26(土)</div>
+</div><div class="col">
+  <div class="col-num">24<span class="col-num-total">/70</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:75.15%"></div>
+    <div class="col-done amber" style="height:25.76%"></div>
+  </div>
+  <div class="col-label">9/27(日)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">64.3%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:58.15%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:43.26%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">43.0%<span class="bar-value-note">作戦コメント 74.4%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:45.03%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:45.03%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">33.3%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:14.74%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:8.42%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">10.9%<span class="bar-value-note">作戦コメント 57.1%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:67.62%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">赤平 恵一</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:79.74%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">91.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:61.39%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">70.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:60.87%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">70.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">野呂 藍亮</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:58.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">66.7%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:55.30%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">63.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">阿部 隆二</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:54.35%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">62.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:48.35%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">55.6%</div>
+</div><div class="bar-row">
+  <div class="bar-label">大島 貞男</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:43.48%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">50.0%</div>
+</div></div>
+  <div class="chart-title">9/26(土) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:57.97%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">16/23</div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:57.97%"></div>
+    <div class="bar-fill overlay" style="width:3.62%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">1/16</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:36.23%"></div>
+    <div class="bar-fill overlay" style="width:36.23%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">10/10</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:25.36%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/7</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:14.49%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/4</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:10.87%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:7.25%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:3.62%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/1</div>
+</div></div><div class="chart-title">9/27(日) 店舗別 来店件数と作戦入力</div><div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:83.33%"></div>
+    <div class="bar-fill overlay" style="width:17.36%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">5/24</div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:65.97%"></div>
+    <div class="bar-fill overlay" style="width:62.50%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">18/19</div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:55.56%"></div>
+    <div class="bar-fill overlay" style="width:3.47%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">1/16</div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:10.42%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/3</div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.94%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.94%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.94%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill-bg" style="width:6.94%"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+  </div>
+  <div class="bar-value">0/2</div>
+</div></div>
+</section>
+  <section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定</h2></div>
+  <div class="empty-note">この週の商談予定はありません</div>
+</section>
+</div><div class="week-panel" id="panel-week5">
+  <div class="week-heading">第5週<span class="week-range">(9/28〜30)</span></div>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">01</span>活動結果入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 22.0,110.0" fill="none" stroke="#0EA894" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171.5" y1="65.3" x2="190.9" y2="51.2" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">0.0<span class="gauge-unit">%</span></div><div class="gauge-target">目標 80%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">活動件数</div><div class="kpi-value">93件</div></div><div class="kpi-card" ><div class="kpi-label">結果入力済み</div><div class="kpi-value">0件</div><div class="kpi-sub">うちコメント有: 0件 (0.0%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力・予定</div><div class="kpi-value">93件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">0<span class="col-num-total">/51</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/28(月)</div>
+</div><div class="col">
+  <div class="col-num">0<span class="col-num-total">/42</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:71.61%"></div>
+    <div class="col-done" style="height:0.00%"></div>
+  </div>
+  <div class="col-label">9/30(水)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#0EA894"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 80%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">川村 正敏</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">橋本 隆志</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:86.96%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div></div>
+  <div class="chart-title">活動結果の内容(内訳)</div>
+  <div class="bar-chart"><div class="empty-note-sm">データなし</div></div>
+</section>
+  
+<section>
+  <div class="sec-head"><h2><span class="sec-num">02</span>作戦入力状況（来店・訪問活動）</h2></div>
+  <div class="hero-row">
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 220 130" class="gauge">
+  <path d="M22,110 A88,88 0 1 1 198,110" fill="none" stroke="#EEF0F4" stroke-width="16" stroke-linecap="round"/>
+  <path d="M22,110 A88,88 0 0 1 56.1,40.5" fill="none" stroke="#E8952A" stroke-width="16" stroke-linecap="round"/>
+  <line x1="110.0" y1="34.0" x2="110.0" y2="10.0" stroke="#C23B2E" stroke-width="3" stroke-dasharray="2 2"/>
+</svg>
+      <div class="gauge-center"><div class="gauge-value">29.0<span class="gauge-unit">%</span></div><div class="gauge-target">目標 50%</div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">作戦入力率</div><div class="kpi-value">29.0%</div></div><div class="kpi-card" ><div class="kpi-label">入力件数</div><div class="kpi-value">27件</div><div class="kpi-sub">うち作戦コメント有: 27件 (100.0%)</div></div><div class="kpi-card" ><div class="kpi-label">未入力件数</div><div class="kpi-value">66件</div></div></div>
+  </div>
+  <div class="chart-title">日別件数(作戦入力済み/総数)</div>
+  <div class="col-chart"><div class="col">
+  <div class="col-num">20<span class="col-num-total">/51</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:86.96%"></div>
+    <div class="col-done amber" style="height:34.10%"></div>
+  </div>
+  <div class="col-label">9/28(月)</div>
+</div><div class="col">
+  <div class="col-num">7<span class="col-num-total">/42</span></div>
+  <div class="col-track">
+    <div class="col-total" style="height:71.61%"></div>
+    <div class="col-done amber" style="height:11.94%"></div>
+  </div>
+  <div class="col-label">9/30(水)</div>
+</div></div>
+  <div class="chart-title">店舗別入力率<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:86.96%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">100.0%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:9.39%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:9.39%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">10.8%<span class="bar-value-note">作戦コメント 100.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">クエスト５</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">森店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">Ｕ―ＣＡＲセンター石川</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="bar-fill overlay" style="width:0.00%;--bar-color:#2E75D6"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value wide">0.0%<span class="bar-value-note">作戦コメント 0.0%</span></div>
+</div></div>
+  <div class="chart-title">入力率が高いCAランキング<span class="target-note">┆ 目標 50%</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">安部 雅史</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平賀 崇</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">杉沢 修平</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">平館 健</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:86.96%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">100.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">村上 英俊</div>
+  <div class="bar-track">
+    <div class="bar-fill" style="width:65.22%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">75.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">川村 正敏</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:10.87%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">12.5%</div>
+</div><div class="bar-row">
+  <div class="bar-label">加藤 英基</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">橋本 隆志</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div><div class="bar-row">
+  <div class="bar-label">水嶋 規雄</div>
+  <div class="bar-track">
+    <div class="bar-fill fail" style="width:0.00%;--bar-color:#E8952A"></div>
+    <div class="target-line" style="left:43.48%"></div>
+  </div>
+  <div class="bar-value">0.0%</div>
+</div></div>
+  
+</section>
+  <section>
+  <div class="sec-head"><h2><span class="sec-num">03</span>商談予定</h2></div>
+  <div class="empty-note">この週の商談予定はありません</div>
+</section>
+</div>
+</div>
+
+<section>
+  <div class="sec-head"><h2><span class="sec-num">04</span>HOT管理表(9月以降・店舗別/週によらず共通)</h2></div>
+  <div class="kpi-row"><div class="kpi-card" ><div class="kpi-label">A</div><div class="kpi-value">16件</div></div><div class="kpi-card" ><div class="kpi-label">B</div><div class="kpi-value">9件</div></div><div class="kpi-card" ><div class="kpi-label">C</div><div class="kpi-value">12件</div></div><div class="kpi-card" ><div class="kpi-label">長期</div><div class="kpi-value">16件</div></div></div>
+  <div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#E24B3C"></span>A</span><span class="legend-item"><span class="legend-dot" style="background:#E8952A"></span>B</span><span class="legend-item"><span class="legend-dot" style="background:#E0BC1E"></span>C</span><span class="legend-item"><span class="legend-dot" style="background:#96A0B2"></span>長期</span></div>
+  <div class="bar-chart"><div class="bar-row">
+  <div class="bar-label">石川店</div>
+  <div class="bar-track stacked"><div class="seg" style="left:0.00%;width:10.42%;background:#E24B3C"></div><div class="seg" style="left:10.42%;width:18.23%;background:#E8952A"></div><div class="seg" style="left:28.65%;width:31.25%;background:#E0BC1E"></div><div class="seg" style="left:59.90%;width:23.44%;background:#96A0B2"></div></div>
+  <div class="bar-value">32件 <span class="bar-breakdown">(A:4 B:7 C:12 長期:9)</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">亀田本町店</div>
+  <div class="bar-track stacked"><div class="seg" style="left:0.00%;width:18.23%;background:#E24B3C"></div><div class="seg" style="left:18.23%;width:2.60%;background:#E8952A"></div><div class="seg" style="left:20.83%;width:5.21%;background:#96A0B2"></div></div>
+  <div class="bar-value">10件 <span class="bar-breakdown">(A:7 B:1 長期:2)</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">神山店</div>
+  <div class="bar-track stacked"><div class="seg" style="left:0.00%;width:13.02%;background:#E24B3C"></div><div class="seg" style="left:13.02%;width:2.60%;background:#E8952A"></div><div class="seg" style="left:15.62%;width:2.60%;background:#96A0B2"></div></div>
+  <div class="bar-value">7件 <span class="bar-breakdown">(A:5 B:1 長期:1)</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">江差店</div>
+  <div class="bar-track stacked"><div class="seg" style="left:0.00%;width:5.21%;background:#96A0B2"></div></div>
+  <div class="bar-value">2件 <span class="bar-breakdown">(長期:2)</span></div>
+</div><div class="bar-row">
+  <div class="bar-label">北桧山店</div>
+  <div class="bar-track stacked"><div class="seg" style="left:0.00%;width:5.21%;background:#96A0B2"></div></div>
+  <div class="bar-value">2件 <span class="bar-breakdown">(長期:2)</span></div>
+</div></div>
+</section>
+</body>
+</html>
