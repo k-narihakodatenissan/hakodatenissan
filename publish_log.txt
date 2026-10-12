@@ -105,3 +105,23 @@ fatal: could not read Username for 'https://github.com': No such file or directo
 done 
 ===== 2026/10/12  9:01:00.17 ===== 
 Already up to date.
+warning: in the working copy of 'publish_log.txt', LF will be replaced by CRLF the next time Git touches it
+[main 8281d18] update 2026/10/12  9:01:04.51
+ Committer: 成澤 邦彦 <PHT001420@DEALERS.JP.NISSAN.BIZ>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 23 insertions(+)
+To https://github.com/k-narihakodatenissan/hakodatenissan.git
+   4e74044..8281d18  main -> main
+done 
+===== 2026/10/12 13:35:03.99 ===== 
+Already up to date.
