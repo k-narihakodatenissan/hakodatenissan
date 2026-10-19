@@ -308,3 +308,24 @@ To https://github.com/k-narihakodatenissan/hakodatenissan.git
 done 
 ===== 2026/10/19  8:20:01.50 ===== 
 Already up to date.
+warning: in the working copy of 'publish_log.txt', LF will be replaced by CRLF the next time Git touches it
+[main 16e53e3] update 2026/10/19  8:20:02.64
+ Committer: 成澤 邦彦 <PHT001420@dealers.jp.nissan.biz>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 3 files changed, 1461 insertions(+), 1357 deletions(-)
+ delete mode 100644 "\345\205\254\351\226\213.bat"
+To https://github.com/k-narihakodatenissan/hakodatenissan.git
+   f7081ca..16e53e3  main -> main
+done 
+===== 2026/10/20  8:20:01.35 ===== 
+Already up to date.
